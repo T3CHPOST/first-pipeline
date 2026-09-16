@@ -1,0 +1,50 @@
+name: Deploy my first website
+
+# Start automatically after a commit to main, or manually from the Actions tab.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub supplies temporary credentials; no personal token is needed.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Finish an active deployment before starting the next one.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Manual runs on other branches must not publish the website.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download repository files
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # A basic guard: fail if the homepage is missing or empty.
+      # This is not full HTML validation or a browser test.
+      - name: Check the website file
+        run: test -s site/index.html
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # An artifact is the bundle of files that will be deployed.
+      - name: Package the website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Deploy the website
+        id: deployment
+        uses: actions/deploy-pages@v4
